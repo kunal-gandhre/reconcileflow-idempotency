@@ -65,9 +65,12 @@ public class IdempotentAspect {
         Duration retention = duration(config.retention());
         // Expose arguments as read-only data; do not enable arbitrary SpEL method execution.
         var context = SimpleEvaluationContext.forReadOnlyDataBinding().build();
-        context.setVariable("payload", call.getArgs()[0]);
+        context.setVariable("payload", config.json() ? JsonPayload.read(call.getArgs()[0]) : call.getArgs()[0]);
         for (int i = 0; i < call.getArgs().length; i++) context.setVariable("p" + i, call.getArgs()[i]);
         Object raw = parser.parseExpression(config.key()).getValue(context);
+        // JSON identities must be strings, avoiding numeric precision/coercion differences across clients.
+        if (config.json() && !(raw instanceof String))
+            throw new IllegalArgumentException("JSON idempotency key must be a nonempty string");
         if (!(raw instanceof String || raw instanceof Number || raw instanceof UUID) || raw.toString().isBlank())
             throw new IllegalArgumentException("Idempotency key must be a nonempty string, number or UUID");
         // Length-prefix the UTF-8 namespace to avoid delimiter collisions and match Go keys.

@@ -32,6 +32,9 @@ import java.lang.annotation.*;
 public @interface Idempotent {
     /** Read-only SpEL expression; #payload is the first argument and #pN selects argument N. */
     String key();
+
+    /** Parse a raw JSON object (String or UTF-8 byte[]) for #payload; the handler receives the original value. */
+    boolean json() default false;
     /** Stable logical consumer + topic scope, e.g. fulfillment:orders:v1. */
     String namespace();
     /** Maximum claim lifetime, not a handler timeout; expiry can permit concurrent work. */

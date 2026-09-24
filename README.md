@@ -125,6 +125,47 @@ The demo registers an unlimited fixed-backoff error handler to make this explici
 
 Commit business database work synchronously **inside** the handler, for example by invoking a separate transactional service. An already-active ambient/container transaction is rejected. This preview does not atomically coordinate Redis, Kafka offsets, and a database. Async work, self-invocation, final/private annotated methods, batch payloads, manual acknowledgments and container transactions are outside the supported contract.
 
+### JSON payloads
+
+Raw JSON messages are supported explicitly. Use a stable **string** event ID, not
+the entire serialized message: whitespace, property order and other fields do not
+change its deduplication identity.
+
+```java
+@KafkaListener(topics = "order-json-events", groupId = "fulfillment-json-demo")
+@Idempotent(json = true, key = "#payload['eventId']",
+    namespace = "fulfillment-json-demo:order-json-events:v1")
+public void processJson(String payload) {
+    // The full, original JSON is available for business processing.
+}
+```
+
+Java accepts a raw JSON `String` or `byte[]`. In JSON mode, `#payload` is a parsed
+object for key evaluation; `#p0` and the actual handler argument retain the original
+value. Nested fields work with `#payload['event']['id']`. For already-deserialized
+POJOs or maps, keep the default `json = false` and use the existing SpEL property or
+map expression. Jackson parses objects as data without polymorphic type activation.
+
+For Go, pass `idempotent.JSONKey("eventId")` as the extractor to `Wrap`, or
+`idempotent.JSONKey("event", "id")` for nested fields. The handler still receives
+the original bytes. Try the Redis-backed example with `cd go` then
+`go run ./examples/json`.
+
+Example messages (first two represent the same event):
+
+```json
+{"eventId":"order-json-1","amount":10}
+{"amount":10,"eventId":"order-json-1"}
+{"eventId":"order-json-2","amount":20}
+```
+
+Each line is a separate message. Malformed JSON, non-object roots, missing/null/blank
+IDs, numeric IDs and multiple concatenated JSON documents fail before any Redis
+claim or business work. Use unique field names in JSON objects. Reusing an ID with
+different business data still skips the later delivery after completion; this is
+identity-based deduplication, not payload equality. Configure a recovery/DLQ policy
+for invalid messages; the demo's unlimited retry policy will keep retrying them.
+
 ### Run the Kafka demo
 
 ```bash
@@ -140,6 +181,12 @@ docker compose -p reconcileflow-dev exec kafka /opt/kafka/bin/kafka-console-prod
 ```
 
 Type `demo-event-1` twice, then `demo-event-2`. Expect one `Processed order event:` line per unique ID while retention remains active. Use fresh IDs for subsequent runs; Redis completion state persists in the Compose volume.
+
+The same application also listens on `order-json-events`. Create that topic using
+the command above with its name substituted, then start the producer for that topic
+and paste the three JSON lines from the JSON section. Expect two
+`Processed JSON order event:` lines. If you disabled the starter locally, start the
+demo with `--reconcileflow.enabled=true` to test deduplication.
 
 ## Quick start — Go
 

@@ -35,6 +35,13 @@ import org.springframework.util.backoff.FixedBackOff;
  */
 @SpringBootApplication
 public class OrderApplication {
+    /** Extract the event ID from raw JSON while leaving the complete message available to business code. */
+    @KafkaListener(topics = "order-json-events", groupId = "fulfillment-json-demo")
+    @Idempotent(json = true, key = "#payload['eventId']", namespace = "fulfillment-json-demo:order-json-events:v1")
+    public void processJson(String payload) {
+        System.out.println("Processed JSON order event: " + payload);
+    }
+
     /** Starts Spring, auto-configures the store/aspect, and starts the Kafka listener container. */
     public static void main(String[] args) { SpringApplication.run(OrderApplication.class, args); }
     /** Runs only on a newly acquired claim; repeated completed event IDs skip this method. */

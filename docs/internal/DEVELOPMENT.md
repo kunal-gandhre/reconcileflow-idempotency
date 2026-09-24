@@ -165,6 +165,36 @@ Expected: zero lag after the consumer has processed all three deliveries. Repeat
 
 This validates actual `@KafkaListener` invocation through the Spring AOP proxy and auto-configuration, Redis connectivity, duplicate suppression, and record acknowledgments. It does **not** simulate a crash between a real business database commit and Redis completion.
 
+### JSON payload smoke test
+
+Build with `mvn -B -ntp verify` and start the example with
+`java -jar examples/order-service/target/order-service-0.1.0-SNAPSHOT.jar --reconcileflow.enabled=true`.
+Use `order-json-events` and group `fulfillment-json-demo`; the plain-text listener
+on `order-events` remains available. Ensure no older consumer for the JSON group
+is running, since it could take the test records.
+
+In PowerShell, send three distinct lines (parenthesize concatenated array elements):
+
+```powershell
+$eventId = 'json-smoke-' + [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+$messages = @(
+    ('{"eventId":"' + $eventId + '","amount":10}')
+    ('{"amount":10,"eventId":"' + $eventId + '"}')
+    ('{"eventId":"' + $eventId + '-second","amount":20}')
+)
+$messages | docker compose -p reconcileflow-dev exec -T kafka /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic order-json-events
+docker compose -p reconcileflow-dev exec -T kafka /opt/kafka/bin/kafka-consumer-groups.sh --bootstrap-server localhost:9092 --describe --group fulfillment-json-demo
+```
+
+Expected: exactly two `Processed JSON order event:` lines for these IDs; the second
+delivery skips business work despite different field order. All three deliveries
+advance the committed offset, with zero lag. The JSON Go example
+(`cd go; go run ./examples/json`) also prints exactly two processed messages.
+JSON unit tests cover byte/string delivery, nested paths, identity independent of
+serialization, original handler payload preservation and invalid input before
+store access. Malformed input is tested without injecting poison records into a
+shared Kafka topic: this demo retries runtime failures indefinitely.
+
 ## 6. Website build and browser checks
 
 ```bash
@@ -241,3 +271,11 @@ reset passed and all four services started, with Redis and Kafka healthy.
 consumer recreated `order-events` and `fulfillment-demo`, but the topic end offset
 was 0 and the group had no committed offset: previous messages and offsets were
 cleared. Stop host applications first if you also want no topics or groups to exist.
+
+### JSON payload verification — 2026-09-24
+
+- `REDIS_INTEGRATION=true` plus `mvn -B -ntp verify`: 32 tests passed, no failures or skips (16 new JSON cases).
+- Go `go vet ./...` and `REDIS_INTEGRATION=true go test -count=1 ./...`: passed, including JSON extraction/wrapper tests and real Redis tests.
+- Go `go run ./examples/json`: three deliveries produced two processed JSON lines against Redis.
+- Java Kafka smoke: three valid JSON messages with two IDs produced two handler lines; group offset 4/4, lag 0. Offset 0 contained a malformed document from an initial shell-array construction error; it was rejected and retried, then explicitly skipped while the test consumer was stopped. The corrected three-record run consumed offsets 1–3. Do not count that manual skip as successful processing.
+- The test used `--reconcileflow.enabled=true`; local disabled settings were preserved. Only the test consumer started for this verification was stopped afterwards.

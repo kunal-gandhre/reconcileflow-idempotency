@@ -18,7 +18,7 @@ spring:
       enable-auto-commit: false
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      # This demo uses the entire string payload as its stable event identity.
+      # String delivery supports both plain IDs and raw JSON; the annotation selects key extraction.
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
     listener:
       # A completed duplicate returns normally and advances the offset; failures enter the error handler.
