@@ -12,7 +12,7 @@
 
 Redis-backed deduplication for synchronous Kafka consumers, with a Java 21 Spring Boot starter and an idiomatic Go handler wrapper.
 
-[Website](https://kunal-gandhre.github.io/reconcileflow-idempotency/) · [Internal development and testing runbook](docs/internal/DEVELOPMENT.md) · [CI](https://github.com/kunal-gandhre/reconcileflow-idempotency/actions/workflows/ci.yml)
+[Website](https://kunal-gandhre.github.io/reconcileflow-idempotency/) · [LinkedIn](https://www.linkedin.com/company/reconcileflow/) · [Internal development and testing runbook](docs/internal/DEVELOPMENT.md) · [CI](https://github.com/kunal-gandhre/reconcileflow-idempotency/actions/workflows/ci.yml)
 
 ReconcileFlow claims an event, runs your handler, and remembers successful completion for a bounded period. A completed duplicate skips business work; an event still being processed returns an error so the consumer can retry.
 
@@ -54,7 +54,7 @@ Each operation touches one Redis key atomically. Completed records contain `DONE
 
 ## Quick start — Java
 
-Prerequisites: JDK 21, Maven 3.9+, Docker Compose. Tested dependency baseline: Spring Boot 3.5.6 and Spring Kafka 3.3.10.
+Prerequisites: JDK 21, Maven 3.9+, Docker Compose. Tested dependency baseline: Spring Boot 3.5.6 and Spring Kafka 3.3.10. Local Compose uses Redis 7.4 and Apache Kafka 3.9.1.
 
 ```bash
 git clone https://github.com/kunal-gandhre/reconcileflow-idempotency.git
@@ -168,9 +168,11 @@ for invalid messages; the demo's unlimited retry policy will keep retrying them.
 
 ### Run the Kafka demo
 
+The example application sets `reconcileflow.enabled: false` so a local checkout does not turn the starter on by default. Start it with the override:
+
 ```bash
 mvn package
-java -jar examples/order-service/target/order-service-0.1.0-SNAPSHOT.jar
+java -jar examples/order-service/target/order-service-0.1.0-SNAPSHOT.jar --reconcileflow.enabled=true
 ```
 
 In another terminal:
@@ -185,8 +187,9 @@ Type `demo-event-1` twice, then `demo-event-2`. Expect one `Processed order even
 The same application also listens on `order-json-events`. Create that topic using
 the command above with its name substituted, then start the producer for that topic
 and paste the three JSON lines from the JSON section. Expect two
-`Processed JSON order event:` lines. If you disabled the starter locally, start the
-demo with `--reconcileflow.enabled=true` to test deduplication.
+`Processed JSON order event:` lines. Without `--reconcileflow.enabled=true`, both
+listeners still run, but Redis-backed skip/retry behavior is not applied. To wipe
+persisted Kafka and Redis test data, use `./scripts/reset-test-data.ps1`.
 
 ## Quick start — Go
 
