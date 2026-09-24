@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+// These unit tests exercise the wrapper without a Kafka client or live Redis.
 package idempotent
 
 import (
@@ -25,6 +26,7 @@ import (
 	"time"
 )
 
+// fakeStore records transitions and injects errors for deterministic control-flow assertions.
 type fakeStore struct {
 	claim      Claim
 	err        error
@@ -34,17 +36,24 @@ type fakeStore struct {
 	releaseErr error
 }
 
+// Return the configured claim result without creating external state.
 func (s *fakeStore) Claim(context.Context, string, string, time.Duration) (Claim, error) {
 	return s.claim, s.err
 }
+
+// Record completion attempts separately from business handler calls.
 func (s *fakeStore) Complete(context.Context, string, string, time.Duration) (bool, error) {
 	s.completed = true
 	return s.complete, s.err
 }
+
+// Expose cleanup failures so the original error can be checked with errors.Is.
 func (s *fakeStore) Release(context.Context, string, string) (bool, error) {
 	s.released = true
 	return true, s.releaseErr
 }
+
+// TestOutcomes checks handler invocation counts and outcomes for every normal claim state.
 func TestOutcomes(t *testing.T) {
 	for _, tc := range []struct {
 		name     string
@@ -71,6 +80,8 @@ func TestOutcomes(t *testing.T) {
 		})
 	}
 }
+
+// TestFailureReleasesAndPreservesErrors checks that business and cleanup errors are both retained.
 func TestFailureReleasesAndPreservesErrors(t *testing.T) {
 	failure := errors.New("business failed")
 	cleanup := errors.New("cleanup failed")
@@ -81,6 +92,8 @@ func TestFailureReleasesAndPreservesErrors(t *testing.T) {
 		t.Fatal("lost failure or invalid transition", err)
 	}
 }
+
+// TestStoreUnavailableDoesNotProcess ensures store failures cannot execute business work.
 func TestStoreUnavailableDoesNotProcess(t *testing.T) {
 	failure := errors.New("offline")
 	s := &fakeStore{err: failure}
@@ -89,6 +102,8 @@ func TestStoreUnavailableDoesNotProcess(t *testing.T) {
 		t.Fatal("missing store error")
 	}
 }
+
+// TestInvalidConfig rejects incomplete setup before a handler can be used.
 func TestInvalidConfig(t *testing.T) {
 	if _, err := Wrap(nil, Config{}, nil, nil); err == nil {
 		t.Fatal("accepted invalid config")

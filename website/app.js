@@ -1,3 +1,13 @@
+/*
+ * Copyright 2026 ReconcileFlow
+ * Author: Kunal Gandhre
+ * SPDX-License-Identifier: Apache-2.0
+ * Licensed under the Apache License, Version 2.0; see LICENSE.
+ * https://www.apache.org/licenses/LICENSE-2.0
+ */
+
+/** Browser-only interactions: code tabs, copy feedback and a labeled delivery simulation. */
+// Render snippets with textContent so source code is never interpreted as HTML.
 const snippets = {
   java: `@KafkaListener(topics = "order-events", groupId = "fulfillment")
 @Idempotent(
@@ -18,6 +28,7 @@ err = handler(ctx, message.Value)`,
 };
 let language = "java";
 const tabs = [...document.querySelectorAll('[role="tab"]')];
+/** Synchronize code, guide link, accessible panel label and the active tab stop. */
 function selectLanguage(lang) {
   language = lang;
   for (const tab of tabs) {
@@ -37,6 +48,7 @@ function selectLanguage(lang) {
     `https://github.com/kunal-gandhre/reconcileflow-idempotency#quick-start--${lang}`;
   document.querySelector("#copy-status").textContent = "";
 }
+// Support the same language selection through pointer and keyboard interaction.
 tabs.forEach((tab, index) => {
   tab.addEventListener("click", () => selectLanguage(tab.id.slice(4)));
   tab.addEventListener("keydown", (event) => {
@@ -49,6 +61,7 @@ tabs.forEach((tab, index) => {
     }
   });
 });
+// Clipboard permission can be denied; keep a readable manual-copy fallback.
 document.querySelector("#copy").addEventListener("click", async () => {
   try {
     await navigator.clipboard.writeText(snippets[language]);
@@ -58,8 +71,10 @@ document.querySelector("#copy").addEventListener("click", async () => {
       "Select and copy the code above.";
   }
 });
+// This local illustration has no Redis/Kafka connection and sends no payloads to a server.
 let delivery = 0;
 document.querySelector("#explore").addEventListener("click", () => {
+  // Cycle through new -> busy -> completed, then restart on the next click.
   delivery++;
   const first = delivery % 3 === 1;
   const busy = delivery % 3 === 2;
@@ -80,4 +95,5 @@ document.querySelector("#explore").addEventListener("click", () => {
   document.querySelector("#explore").textContent =
     delivery % 3 === 0 ? "Restart the flow" : "Next delivery →";
 });
+// Initialize the panel from the same code path used by later tab changes.
 selectLanguage("java");

@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+// Command basic demonstrates Redis-backed handler deduplication without a Kafka client.
 package main
 
 import (
@@ -28,9 +29,11 @@ import (
 	"time"
 )
 
+// main delivers two unique IDs across three calls and prints only newly processed IDs.
 func main() {
 	client := redis.NewClient(&redis.Options{Addr: "localhost:6379"})
 	defer client.Close()
+	// Keep the client and business handler explicit; the wrapper owns only deduplication.
 	handler, err := idempotent.Wrap(redisstore.New(client), idempotent.Config{Namespace: "go-demo:orders:v1", Lease: time.Minute, Retention: 24 * time.Hour},
 		func(payload []byte) (string, error) { return string(payload), nil },
 		func(ctx context.Context, payload []byte) error {
@@ -40,6 +43,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	// Existing completion records survive reruns; use fresh IDs to observe new work.
 	for _, id := range []string{"order-1", "order-1", "order-2"} {
 		if err := handler(context.Background(), []byte(id)); err != nil {
 			log.Fatal(err)

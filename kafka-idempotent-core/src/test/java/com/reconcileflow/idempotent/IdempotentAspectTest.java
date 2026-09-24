@@ -26,10 +26,17 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import static org.mockito.ArgumentMatchers.*;
 
+/**
+ * Exercises real Spring AOP interception with a mocked store, without Kafka or Redis.
+ * Assertions cover both handler execution and state transitions, especially fail-closed behavior.
+ *
+ * @author Kunal Gandhre
+ */
 class IdempotentAspectTest {
     IdempotencyStore store;
     Listener target;
     Listener proxy;
+    // Use an actual proxy so annotation resolution and advice are tested, not just a helper.
     @BeforeEach void setup() {
         store = mock(IdempotencyStore.class);
         when(store.claim(anyString(), anyString(), any())).thenReturn(IdempotencyStore.Claim.ACQUIRED);
@@ -39,54 +46,64 @@ class IdempotentAspectTest {
         factory.addAspect(new IdempotentAspect(store));
         proxy = factory.getProxy();
     }
+    /** A new claim must finish business work before completion is stored. */
     @Test void processesAndCompletes() {
         proxy.consume("event-1");
         assertThat(target.calls).isEqualTo(1);
         verify(store).complete(startsWith("rf:"), anyString(), eq(Duration.ofHours(24)));
         verify(store, never()).release(anyString(), anyString());
     }
+    /** A completed duplicate must neither invoke the handler nor refresh completion. */
     @Test void completedDuplicateSkipsBusinessLogic() {
         when(store.claim(anyString(), anyString(), any())).thenReturn(IdempotencyStore.Claim.COMPLETED);
         proxy.consume("event-1");
         assertThat(target.calls).isZero();
         verify(store, never()).complete(anyString(), anyString(), any());
     }
+    /** Busy claims throw; returning normally here would let Kafka acknowledge unfinished work. */
     @Test void busyIsRetriedNotAcknowledged() {
         when(store.claim(anyString(), anyString(), any())).thenReturn(IdempotencyStore.Claim.BUSY);
         assertThatThrownBy(() -> proxy.consume("event-1")).isInstanceOf(RetryableIdempotencyException.class);
         assertThat(target.calls).isZero();
     }
+    /** Cleanup failure must not replace the business error that drives retry decisions. */
     @Test void failureReleasesOwnerAndPreservesOriginalException() {
         target.failure = new IllegalArgumentException("business failure");
         when(store.release(anyString(), anyString())).thenThrow(new IllegalStateException("offline"));
         assertThatThrownBy(() -> proxy.consume("event-1")).isSameAs(target.failure).hasSuppressedException(new IllegalStateException("offline"));
         verify(store, never()).complete(anyString(), anyString(), any());
     }
+    /** Completion failure after work is uncertain; do not release any replacement owner. */
     @Test void lostLeaseFailsAfterProcessing() {
         when(store.complete(anyString(), anyString(), any())).thenReturn(false);
         assertThatThrownBy(() -> proxy.consume("event-1")).isInstanceOf(RetryableIdempotencyException.class);
         assertThat(target.calls).isEqualTo(1);
         verify(store, never()).release(anyString(), anyString());
     }
+    /** If claiming is unavailable, business code must never run. */
     @Test void unavailableStoreFailsClosed() {
         when(store.claim(anyString(), anyString(), any())).thenThrow(new IllegalStateException("offline"));
         assertThatThrownBy(() -> proxy.consume("event-1")).hasMessage("offline");
         assertThat(target.calls).isZero();
     }
+    /** Reject blank identifiers before any Redis interaction. */
     @Test void invalidKeyCannotClaim() {
         assertThatThrownBy(() -> proxy.consume(" ")).isInstanceOf(IllegalArgumentException.class);
         verifyNoInteractions(store);
     }
+    /** Restore thread-local transaction state so this test cannot contaminate later tests. */
     @Test void rejectsAmbientTransaction() {
         TransactionSynchronizationManager.setActualTransactionActive(true);
         try { assertThatThrownBy(() -> proxy.consume("event-1")).hasMessageContaining("Ambient transactions"); }
         finally { TransactionSynchronizationManager.clear(); }
         verifyNoInteractions(store);
     }
+    /** Reject non-void signatures before claiming; this does not detect every async mechanism. */
     @Test void rejectsAsyncReturnType() {
         assertThatThrownBy(() -> proxy.invalid("event-1")).isInstanceOf(IllegalArgumentException.class);
         verifyNoInteractions(store);
     }
+    /** Minimal proxy target with observable calls and a configurable business failure. */
     public static class Listener {
         int calls;
         RuntimeException failure;

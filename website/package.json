@@ -6,5 +6,8 @@
   "scripts": {
     "dev": "node server.mjs",
     "build": "node build.mjs"
-  }
+  },
+  "license": "Apache-2.0",
+  "author": "Kunal Gandhre",
+  "copyright": "Copyright 2026 ReconcileFlow"
 }

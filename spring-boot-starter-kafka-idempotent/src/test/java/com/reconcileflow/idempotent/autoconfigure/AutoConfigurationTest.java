@@ -24,15 +24,25 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
+/**
+ * Loads small isolated Spring contexts to verify starter registration and override behavior.
+ * Mocked Redis infrastructure keeps these wiring tests independent of external services.
+ *
+ * @author Kunal Gandhre
+ */
 class AutoConfigurationTest {
     ApplicationContextRunner runner = new ApplicationContextRunner().withConfiguration(AutoConfigurations.of(IdempotencyAutoConfiguration.class));
+    /** Redis infrastructure should create exactly one store and aspect. */
     @Test void wiresRedisAndAspect() { runner.withBean(StringRedisTemplate.class, () -> mock(StringRedisTemplate.class)).run(c -> {
         assertThat(c).hasSingleBean(IdempotencyStore.class).hasSingleBean(IdempotentAspect.class);
     }); }
+    /** An application-provided store must take precedence over the default adapter. */
     @Test void respectsCustomStore() { var store = mock(IdempotencyStore.class); runner.withBean(IdempotencyStore.class, () -> store).run(c -> {
         assertThat(c.getBean(IdempotencyStore.class)).isSameAs(store);
         assertThat(c).hasSingleBean(IdempotentAspect.class);
     }); }
+    /** The opt-out property removes the interception aspect. */
+    /** Enabling protection without a store must fail startup, not silently disable protection. */
     @Test void canDisable() { runner.withPropertyValues("reconcileflow.enabled=false").run(c -> assertThat(c).doesNotHaveBean(IdempotentAspect.class)); }
     @Test void missingStoreFailsStartup() { runner.run(c -> assertThat(c).hasFailed()); }
 }

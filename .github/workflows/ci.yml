@@ -1,8 +1,16 @@
+# Copyright 2026 ReconcileFlow
+# Author: Kunal Gandhre
+# SPDX-License-Identifier: Apache-2.0
+# Licensed under the Apache License, Version 2.0; see LICENSE.
+# https://www.apache.org/licenses/LICENSE-2.0
+
 name: CI
 on: [push, pull_request]
 permissions:
   contents: read
+# Each job uses isolated infrastructure; Redis tests are explicitly enabled rather than silently skipped.
 jobs:
+  # Compile all Maven modules and exercise unit, wiring and real Redis integration tests.
   java:
     runs-on: ubuntu-latest
     services:
@@ -20,6 +28,7 @@ jobs:
       - run: mvn -B -ntp verify
         env:
           REDIS_INTEGRATION: 'true'
+  # Run static checks and the race detector against the Go wrapper and Redis scripts.
   go:
     runs-on: ubuntu-latest
     services:
@@ -39,6 +48,7 @@ jobs:
       - run: go test -race -count=1 ./...
         env:
           REDIS_INTEGRATION: 'true'
+  # The static website uses Node built-ins and requires no npm dependency installation.
   website:
     runs-on: ubuntu-latest
     steps:

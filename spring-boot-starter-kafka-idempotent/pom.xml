@@ -1,7 +1,18 @@
+<!--
+  Copyright 2026 ReconcileFlow
+  Author: Kunal Gandhre
+  SPDX-License-Identifier: Apache-2.0
+  Licensed under the Apache License, Version 2.0; see LICENSE.
+  https://www.apache.org/licenses/LICENSE-2.0
+-->
+
+<!-- Starter module: adds Kafka integration and conditional Spring Boot bean registration. -->
 <project xmlns="http://maven.apache.org/POM/4.0.0">
   <modelVersion>4.0.0</modelVersion>
+  <!-- Inherit dependency versions and build defaults instead of choosing them per module. -->
   <parent><groupId>com.reconcileflow</groupId><artifactId>reconcileflow</artifactId><version>0.1.0-SNAPSHOT</version></parent>
   <artifactId>spring-boot-starter-kafka-idempotent</artifactId>
+  <!-- Application dependencies are compiled normally; test helpers use test scope where declared. -->
   <dependencies>
     <dependency><groupId>com.reconcileflow</groupId><artifactId>kafka-idempotent-core</artifactId><version>${project.version}</version></dependency>
     <dependency><groupId>org.springframework.kafka</groupId><artifactId>spring-kafka</artifactId></dependency>

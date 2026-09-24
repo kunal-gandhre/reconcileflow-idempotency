@@ -1,3 +1,10 @@
+# Copyright 2026 ReconcileFlow
+# Author: Kunal Gandhre
+# SPDX-License-Identifier: Apache-2.0
+# Licensed under the Apache License, Version 2.0; see LICENSE.
+# https://www.apache.org/licenses/LICENSE-2.0
+
+# Exclude generated builds, local tools, credentials and machine-specific editor state.
 **/target/
 node_modules/
 .tools/

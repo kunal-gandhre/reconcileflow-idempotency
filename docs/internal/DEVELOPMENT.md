@@ -1,3 +1,11 @@
+<!--
+  Copyright 2026 ReconcileFlow
+  Author: Kunal Gandhre
+  SPDX-License-Identifier: Apache-2.0
+  Licensed under the Apache License, Version 2.0; see LICENSE.
+  https://www.apache.org/licenses/LICENSE-2.0
+-->
+
 # Internal development README
 
 Maintainer runbook for building, testing, and releasing ReconcileFlow. “Internal” describes the audience: this file is committed to the public repository. Never put credentials, private payloads, or production incident data here.
@@ -5,7 +13,7 @@ Maintainer runbook for building, testing, and releasing ReconcileFlow. “Intern
 ## Environment
 
 - Java 21, Maven 3.9+, Go 1.23+ (local verification used Go 1.24.2), Node.js 22+.
-- Docker Engine with Compose, available ports 6379 and 9092.
+- Docker Engine with Compose, available ports 6379, 9092, 5540 and 8081.
 - Redis 7.4 and Apache Kafka 3.9.1 from the root `compose.yml`.
 - Commands below run from the repository root unless stated otherwise.
 
@@ -20,7 +28,29 @@ docker compose -p reconcileflow-dev exec -T redis redis-cli ping
 docker compose -p reconcileflow-dev exec -T kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
 ```
 
-Expected: both containers running, Redis replies `PONG`, Kafka lists topics without a connection error. Image download completion is not proof of readiness; check the services above. Ports bind only to loopback. Use a separate Compose project for unrelated work.
+Expected: all four containers running, Redis and Kafka healthy, Redis replies `PONG`, Kafka lists topics without a connection error. Image download completion is not proof of readiness; check the services above. Ports bind only to loopback. Use a separate Compose project for unrelated work.
+
+### RedisInsight and Kafka UI
+
+- Open RedisInsight at http://localhost:5540. The `ReconcileFlow local` connection is preconfigured at `redis:6379`, database 0, without a password for this local setup. Complete any first-run prompts in the UI. Browse `rf:*` keys after running an example; completed events contain `DONE`. GUI settings persist in the separate `redisinsight-data` volume.
+- Open Kafbat Kafka UI at http://localhost:8081. Select `ReconcileFlow local`, then inspect brokers, topics, and consumer groups. After running the Kafka example, inspect `order-events` and the `fulfillment-demo` group.
+- Kafka UI connects through the internal `kafka:29092` listener; host applications still connect through `localhost:9092`. Port 29092 is only used on the Compose network. Separate advertised listeners let both kinds of client retrieve reachable broker addresses.
+- UI images use upstream `latest` tags for local development. Pin a tested version or digest if you need repeatable UI deployments. Configuration follows the official [RedisInsight Docker guide](https://redis.io/docs/latest/operate/redisinsight/install/install-on-docker/), [Redis connection settings](https://redis.io/docs/latest/operate/redisinsight/configuration/), and [Kafbat getting-started guide](https://ui.docs.kafbat.io/overview/getting-started).
+- Kafka stores messages and metadata in `kafka-data`. When upgrading an older checkout that stored data in the container filesystem, stop the old broker and back up `/tmp/kafka-logs` before recreating it; restore that backup into the new volume with ownership for `appuser`. Ordinary future container recreations retain this named volume.
+
+UI smoke-check commands (PowerShell):
+
+```powershell
+docker compose -p reconcileflow-dev config --quiet
+docker compose -p reconcileflow-dev up -d
+docker compose -p reconcileflow-dev ps
+(Invoke-WebRequest -UseBasicParsing http://localhost:5540/api/health/).StatusCode
+(Invoke-WebRequest -UseBasicParsing http://localhost:8081).StatusCode
+Invoke-RestMethod 'http://localhost:8081/api/clusters'
+Invoke-RestMethod 'http://localhost:8081/api/clusters/ReconcileFlow%20local/topics'
+```
+
+Expected: valid Compose configuration, HTTP 200 from both UIs, and Kafka cluster/topic responses without connection errors. Inspect the preconfigured Redis database in the UI; an HTTP health response alone does not prove its database connection works. These UIs can modify local data; use inspection views for smoke checks.
 
 ## 2. Java unit and Spring wiring tests
 
@@ -148,8 +178,8 @@ Before publishing: inspect `git diff --check`, staged paths, license, README lin
 ## 8. Cleanup and troubleshooting
 
 - Stop the sample consumer and website using Ctrl+C in their terminals.
-- `docker compose -p reconcileflow-dev stop` stops this project's containers and preserves Redis state.
-- `docker compose -p reconcileflow-dev down` removes this project's containers/network while retaining its named volume. Do not use `down -v` unless intentionally discarding test history.
+- `docker compose -p reconcileflow-dev stop` stops this project's containers and preserves their state.
+- `docker compose -p reconcileflow-dev down` removes this project's containers/network while retaining the Redis, RedisInsight and Kafka named volumes. Do not use `down -v` unless intentionally discarding test history.
 - Docker pipe access denied: retry from a terminal with access to the running Docker engine; do not weaken the engine's security.
 - Maven/Go network denied: dependency downloads need network access. Use the normal approved package sources; do not disable TLS verification.
 - Redis connection refused: verify container health, host and port before running integration tests.
@@ -171,3 +201,11 @@ Before publishing: inspect `git diff --check`, staged paths, license, README lin
 The initial Pages run failed because the repository's Pages source had not yet been configured. Setting Source to GitHub Actions and pushing the website refinements resolved it. Local screenshots were inspected at desktop and mobile sizes; final deployed DOM and asset loading were checked separately. A later full-page screenshot attempt timed out in the browser automation layer; this did not affect site loading or the earlier visual checks.
 
 Remaining coverage limits: no Redis failover/eviction fault injection, no business database transaction crash test, no Kubernetes rebalance test, no automatic lease renewal, no throughput benchmark, and no real Go Kafka consumer integration. Extend these before making stronger production claims.
+
+### UI addition verification — 2026-09-24
+
+Compose validation passed and all four services started. Redis and Kafka health checks passed; Redis returned `PONG`; host-listener Kafka topic listing succeeded. Both UI URLs returned HTTP 200. Kafbat's cluster API reported `ONLINE` with one broker, and its topics API listed `order-events`. Existing Kafka data was copied from the stopped container into `kafka-data` before recreation; the topic and consumer offsets remained available. The current sample group has no active consumer and lag 6, so this inspection is not a fresh end-to-end processing test.
+
+RedisInsight's health endpoint returned 200, and browser inspection reached its first-run EULA/privacy screen. Database browsing remains unverified until the user completes those prompts; no terms or telemetry choices were submitted automatically. The Compose environment supplies the local Redis connection. If no connection appears after onboarding, add `redis:6379` manually with alias `ReconcileFlow local`.
+
+The accompanying comment/licensing changes passed 16 Java tests with Redis enabled, Go tests and `go vet`, and the static site build before the Compose UI additions. See [LICENSING.md](LICENSING.md) for attribution rules and detailed checks.

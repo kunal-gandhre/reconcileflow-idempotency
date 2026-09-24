@@ -1,1 +1,10 @@
+<!--
+  Copyright 2026 ReconcileFlow
+  Author: Kunal Gandhre
+  SPDX-License-Identifier: Apache-2.0
+  Licensed under the Apache License, Version 2.0; see LICENSE.
+  https://www.apache.org/licenses/LICENSE-2.0
+-->
+
+<!-- Scalable brand mark; the viewBox keeps it crisp at browser-tab sizes. -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#0755ff"/><path d="M16 20h19a9 9 0 0 1 0 18H16V20m13 18 16 13" fill="none" stroke="white" stroke-width="7"/></svg>

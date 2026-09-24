@@ -20,9 +20,20 @@ package com.reconcileflow.idempotent;
 
 import java.time.Duration;
 
+/**
+ * Storage boundary for bounded event deduplication.
+ * Each operation must be atomic; only the current owner may change a processing claim.
+ * Storage failures must propagate so callers never acknowledge an uncertain outcome.
+ *
+ * @author Kunal Gandhre
+ */
 public interface IdempotencyStore {
+    /** ACQUIRED permits work; BUSY requires retry; COMPLETED permits skipping work. */
     enum Claim { ACQUIRED, BUSY, COMPLETED }
+    /** Creates a leased claim when absent, otherwise reports the existing state. */
     Claim claim(String key, String owner, Duration lease);
+    /** Replaces this owner's live claim with completion retention; false means ownership was lost. */
     boolean complete(String key, String owner, Duration retention);
+    /** Removes only this owner's active claim; never removes a completed record. */
     boolean release(String key, String owner);
 }

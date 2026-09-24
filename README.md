@@ -1,3 +1,11 @@
+<!--
+  Copyright 2026 ReconcileFlow
+  Author: Kunal Gandhre
+  SPDX-License-Identifier: Apache-2.0
+  Licensed under the Apache License, Version 2.0; see LICENSE.
+  https://www.apache.org/licenses/LICENSE-2.0
+-->
+
 # ReconcileFlow
 
 **Repeat delivery. Not the work.**
@@ -54,6 +62,8 @@ cd reconcileflow-idempotency
 mvn install
 docker compose -p reconcileflow-dev up -d
 ```
+
+Compose also starts [RedisInsight](http://localhost:5540) and [Kafka UI](http://localhost:8081), preconfigured for the local services. RedisInsight connects to `redis:6379`; Kafka UI uses `kafka:29092` inside Docker. Host applications continue to use `localhost:6379` and `localhost:9092`. All published ports bind to loopback. See the [development runbook](docs/internal/DEVELOPMENT.md) for UI checks.
 
 After local installation, add this dependency to a Spring Boot application:
 

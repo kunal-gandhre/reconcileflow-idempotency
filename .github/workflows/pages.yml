@@ -1,13 +1,21 @@
+# Copyright 2026 ReconcileFlow
+# Author: Kunal Gandhre
+# SPDX-License-Identifier: Apache-2.0
+# Licensed under the Apache License, Version 2.0; see LICENSE.
+# https://www.apache.org/licenses/LICENSE-2.0
+
 name: Deploy website
 on:
   workflow_dispatch:
   push:
     branches: [main]
     paths: ['website/**', '.github/workflows/pages.yml']
+# Pages deployment needs artifact access and a short-lived OIDC token, not a stored personal token.
 permissions:
   contents: read
   pages: write
   id-token: write
+# Serialize deployments so an older upload cannot overwrite a newer site.
 concurrency:
   group: pages
   cancel-in-progress: false
@@ -24,6 +32,7 @@ jobs:
           node-version: '22'
       - run: npm run build --prefix website
       - uses: actions/configure-pages@v5
+      # Publish only the build output, never source files or local development tooling.
       - uses: actions/upload-pages-artifact@v3
         with:
           path: website/dist

@@ -1,3 +1,11 @@
+<!--
+  Copyright 2026 ReconcileFlow
+  Author: Kunal Gandhre
+  SPDX-License-Identifier: Apache-2.0
+  Licensed under the Apache License, Version 2.0; see LICENSE.
+  https://www.apache.org/licenses/LICENSE-2.0
+-->
+
 # Website design reference
 
 The built-in image generation tool produced the initial website concept on 2026-09-24. The reference image is a design aid, not a shipped page asset; all UI, diagrams, text and controls are implemented in HTML/CSS/JavaScript.

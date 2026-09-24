@@ -20,13 +20,22 @@ package com.reconcileflow.idempotent;
 
 import java.lang.annotation.*;
 
-/** Apply alongside @KafkaListener to a synchronous, single-record, void method. */
+/**
+ * Declares the event identity and retention policy for a synchronous Spring bean method.
+ * Use alongside {@code @KafkaListener}; this annotation does not register a Kafka listener.
+ * Methods must return void and finish all business work before returning.
+ *
+ * @author Kunal Gandhre
+ */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Idempotent {
+    /** Read-only SpEL expression; #payload is the first argument and #pN selects argument N. */
     String key();
     /** Stable logical consumer + topic scope, e.g. fulfillment:orders:v1. */
     String namespace();
+    /** Maximum claim lifetime, not a handler timeout; expiry can permit concurrent work. */
     String lease() default "60s";
+    /** How long completed work is remembered, measured from successful completion. */
     String retention() default "24h";
 }

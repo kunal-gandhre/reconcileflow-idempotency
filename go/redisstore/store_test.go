@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+// Integration tests opt into a real Redis server using REDIS_INTEGRATION=true.
 package redisstore
 
 import (
@@ -30,6 +31,7 @@ import (
 	"time"
 )
 
+// integrationStore connects to Redis and allocates a unique, expiring key per test.
 func integrationStore(t *testing.T) (*Store, string) {
 	t.Helper()
 	if os.Getenv("REDIS_INTEGRATION") != "true" {
@@ -40,12 +42,15 @@ func integrationStore(t *testing.T) (*Store, string) {
 		port = "6379"
 	}
 	client := redis.NewClient(&redis.Options{Addr: "localhost:" + port})
+	// Close this test's connection without deleting unrelated database contents.
 	t.Cleanup(func() { _ = client.Close() })
 	if err := client.Ping(context.Background()).Err(); err != nil {
 		t.Fatal(err)
 	}
 	return New(client), fmt.Sprintf("rf:go-test:%d", time.Now().UnixNano())
 }
+
+// TestRedisOwnershipAndCompletion covers state transitions and rejection of the wrong owner.
 func TestRedisOwnershipAndCompletion(t *testing.T) {
 	s, key := integrationStore(t)
 	ctx := context.Background()
@@ -71,12 +76,15 @@ func TestRedisOwnershipAndCompletion(t *testing.T) {
 		t.Fatal(ok, e)
 	}
 }
+
+// TestRedisExpiredOwnerCannotMutateNewClaim proves expired workers cannot mutate replacement claims.
 func TestRedisExpiredOwnerCannotMutateNewClaim(t *testing.T) {
 	s, key := integrationStore(t)
 	ctx := context.Background()
 	if _, e := s.Claim(ctx, key, "old", 50*time.Millisecond); e != nil {
 		t.Fatal(e)
 	}
+	// Cross the deliberately short lease boundary before attempting a replacement claim.
 	time.Sleep(100 * time.Millisecond)
 	if c, e := s.Claim(ctx, key, "new", time.Second); e != nil || c != idempotent.Acquired {
 		t.Fatal(c, e)
@@ -88,8 +96,11 @@ func TestRedisExpiredOwnerCannotMutateNewClaim(t *testing.T) {
 		t.Fatal(ok, e)
 	}
 }
+
+// TestRedisConcurrentClaim checks that exactly one of 32 contenders acquires the live lease.
 func TestRedisConcurrentClaim(t *testing.T) {
 	s, key := integrationStore(t)
+	// Multiple goroutines report wins; use an atomic counter to keep the test race-free.
 	var wins atomic.Int32
 	var wg sync.WaitGroup
 	for i := 0; i < 32; i++ {

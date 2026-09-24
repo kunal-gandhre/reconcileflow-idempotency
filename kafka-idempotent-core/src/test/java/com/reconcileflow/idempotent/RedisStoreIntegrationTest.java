@@ -28,17 +28,26 @@ import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactor
 import org.springframework.data.redis.core.StringRedisTemplate;
 import static org.assertj.core.api.Assertions.*;
 
+/**
+ * Checks Lua state transitions and ownership against a real Redis server.
+ * Explicit opt-in prevents an ordinary unit-test run from depending on local infrastructure.
+ *
+ * @author Kunal Gandhre
+ */
 @EnabledIfEnvironmentVariable(named = "REDIS_INTEGRATION", matches = "true")
 class RedisStoreIntegrationTest {
     LettuceConnectionFactory connection;
     RedisIdempotencyStore store;
     String key;
+    // Isolate each test with a short-lived unique key; never flush the shared Redis database.
     @BeforeEach void setup() {
         connection = new LettuceConnectionFactory("localhost", Integer.parseInt(System.getenv().getOrDefault("REDIS_PORT", "6379")));
         connection.afterPropertiesSet(); connection.start();
         store = new RedisIdempotencyStore(new StringRedisTemplate(connection));
         key = "rf:test:" + UUID.randomUUID();
     }
+    // Release connection resources even when a test fails.
+    /** Verifies new, busy and completed states plus wrong-owner rejection. */
     @AfterEach void close() { connection.destroy(); }
     @Test void stateTransitionsAndOwnership() {
         assertThat(store.claim(key,"a",Duration.ofSeconds(10))).isEqualTo(IdempotencyStore.Claim.ACQUIRED);
@@ -49,6 +58,7 @@ class RedisStoreIntegrationTest {
         assertThat(store.release(key,"a")).isFalse();
         assertThat(store.claim(key,"c",Duration.ofSeconds(10))).isEqualTo(IdempotencyStore.Claim.COMPLETED);
     }
+    /** Lets the lease expire, then proves the previous owner cannot mutate its replacement. */
     @Test void expiredOwnerCannotDeleteNewClaim() throws Exception {
         store.claim(key,"old",Duration.ofMillis(50));
         Thread.sleep(100);
@@ -56,6 +66,7 @@ class RedisStoreIntegrationTest {
         assertThat(store.release(key,"old")).isFalse();
         assertThat(store.complete(key,"old",Duration.ofSeconds(10))).isFalse();
     }
+    /** Competing threads must observe one winner while the ten-second lease is live. */
     @Test void onlyOneConcurrentClaimWins() throws Exception {
         try(var pool = Executors.newFixedThreadPool(8)) {
             var tasks = IntStream.range(0,32).<Callable<IdempotencyStore.Claim>>mapToObj(i -> () -> store.claim(key,"owner-"+i,Duration.ofSeconds(10))).toList();

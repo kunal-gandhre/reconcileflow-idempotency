@@ -1,3 +1,9 @@
+# Copyright 2026 ReconcileFlow
+# Author: Kunal Gandhre
+# SPDX-License-Identifier: Apache-2.0
+# Licensed under the Apache License, Version 2.0; see LICENSE.
+# https://www.apache.org/licenses/LICENSE-2.0
+
 spring:
   main:
     web-application-type: none
@@ -8,9 +14,12 @@ spring:
   kafka:
     bootstrap-servers: localhost:9092
     consumer:
+      # Spring controls commits after successful synchronous listener completion.
       enable-auto-commit: false
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      # This demo uses the entire string payload as its stable event identity.
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
     listener:
+      # A completed duplicate returns normally and advances the offset; failures enter the error handler.
       ack-mode: record

@@ -1,4 +1,11 @@
 <!doctype html>
+<!--
+  Copyright 2026 ReconcileFlow
+  Author: Kunal Gandhre
+  SPDX-License-Identifier: Apache-2.0
+  Licensed under the Apache License, Version 2.0; see LICENSE.
+  https://www.apache.org/licenses/LICENSE-2.0
+-->
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -14,6 +21,7 @@
   </head>
   <body>
     <a class="skip" href="#main">Skip to content</a>
+    <!-- Shared navigation links to page sections and the source repository. -->
     <header class="shell">
       <a class="brand" href="#" aria-label="ReconcileFlow home"
         >Reconcile<span>Flow</span></a
@@ -27,6 +35,7 @@
       </nav>
     </header>
     <main id="main">
+      <!-- Hero: product introduction plus a browser-only illustration of the state machine. -->
       <section class="hero shell">
         <div class="hero-copy">
           <h1>Repeat delivery.<br /><span>Not the work.</span></h1>
@@ -108,6 +117,7 @@
           </p>
         </div>
       </section>
+      <!-- The three stages mirror the libraries: claim, process, remember. -->
       <section class="steps shell" id="how-it-works" aria-label="How it works">
         <article>
           <span class="step-number">01</span>
@@ -134,6 +144,7 @@
           </p>
         </article>
       </section>
+      <!-- Language tabs update the code panel and its accessibility state in app.js. -->
       <section class="quickstart" id="quickstart">
         <div class="shell quick-grid">
           <div>
@@ -214,6 +225,7 @@
         ><span class="divider"></span><span>Early preview · v0.1</span>
       </div>
     </footer>
+    <!-- Load after the markup so event handlers can attach to existing controls. -->
     <script type="module" src="./app.js"></script>
   </body>
 </html>

@@ -1,7 +1,18 @@
+<!--
+  Copyright 2026 ReconcileFlow
+  Author: Kunal Gandhre
+  SPDX-License-Identifier: Apache-2.0
+  Licensed under the Apache License, Version 2.0; see LICENSE.
+  https://www.apache.org/licenses/LICENSE-2.0
+-->
+
+<!-- Core module: annotation, Spring AOP flow, store contract and Redis implementation. -->
 <project xmlns="http://maven.apache.org/POM/4.0.0">
   <modelVersion>4.0.0</modelVersion>
+  <!-- Inherit dependency versions and build defaults instead of choosing them per module. -->
   <parent><groupId>com.reconcileflow</groupId><artifactId>reconcileflow</artifactId><version>0.1.0-SNAPSHOT</version></parent>
   <artifactId>kafka-idempotent-core</artifactId>
+  <!-- Application dependencies are compiled normally; test helpers use test scope where declared. -->
   <dependencies>
     <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-aop</artifactId></dependency>
     <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-data-redis</artifactId></dependency>

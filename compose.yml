@@ -1,22 +1,73 @@
+# Copyright 2026 ReconcileFlow
+# Author: Kunal Gandhre
+# SPDX-License-Identifier: Apache-2.0
+# Licensed under the Apache License, Version 2.0; see LICENSE.
+# https://www.apache.org/licenses/LICENSE-2.0
+
+# Local development only: service ports are exposed on loopback, not the LAN.
 services:
   redis:
     image: redis:7.4-alpine
     ports: ["127.0.0.1:6379:6379"]
+    # Keep completed records across Redis restarts and avoid silent eviction of deduplication state.
     command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
     volumes: ["redis-data:/data"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+  redisinsight:
+    # Official Redis GUI; latest follows upstream releases for this development tool.
+    image: redis/redisinsight:latest
+    ports: ["127.0.0.1:5540:5540"]
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      # Containers reach Redis by its Compose service name, not host localhost.
+      RI_REDIS_HOST: redis
+      RI_REDIS_PORT: "6379"
+      RI_REDIS_ALIAS: ReconcileFlow local
+    # Persist GUI settings separately from the Redis database contents.
+    volumes: ["redisinsight-data:/data"]
   kafka:
     image: apache/kafka:3.9.1
     ports: ["127.0.0.1:9092:9092"]
+    # Persist broker metadata and messages when listener changes recreate the container.
+    volumes: ["kafka-data:/tmp/kafka-logs"]
     environment:
       KAFKA_NODE_ID: 1
+      KAFKA_LOG_DIRS: /tmp/kafka-logs
+      # One KRaft node acts as both broker and controller; no ZooKeeper is required.
       KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENERS: PLAINTEXT://:9092,INTERNAL://:29092,CONTROLLER://:9093
+      # Host consumers use localhost; container clients need a separately advertised address.
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,INTERNAL://kafka:29092
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,INTERNAL:PLAINTEXT
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+    healthcheck:
+      test: ["CMD", "/opt/kafka/bin/kafka-topics.sh", "--bootstrap-server", "kafka:29092", "--list"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 20s
+  kafka-ui:
+    image: ghcr.io/kafbat/kafka-ui:latest
+    ports: ["127.0.0.1:8081:8080"]
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      KAFKA_CLUSTERS_0_NAME: ReconcileFlow local
+      # The internal listener returns broker addresses reachable from this container.
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
 volumes:
   redis-data:
+  redisinsight-data:
+  kafka-data:

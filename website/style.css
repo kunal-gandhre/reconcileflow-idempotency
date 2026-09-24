@@ -1,3 +1,12 @@
+/*
+ * Copyright 2026 ReconcileFlow
+ * Author: Kunal Gandhre
+ * SPDX-License-Identifier: Apache-2.0
+ * Licensed under the Apache License, Version 2.0; see LICENSE.
+ * https://www.apache.org/licenses/LICENSE-2.0
+ */
+
+/* Shared design tokens: all sections reuse the same colors and typography. */
 :root {
   --blue: #0755ff;
   --ink: #090e18;
@@ -67,6 +76,7 @@ nav a:hover,
 .text-link:hover {
   color: var(--blue);
 }
+/* Desktop hero pairs the introduction with the event-processing diagram. */
 .hero {
   display: grid;
   grid-template-columns: 1fr 1.08fr;
@@ -128,6 +138,7 @@ h1 {
   margin-top: 22px;
   color: var(--muted);
 }
+/* Grid tracks reserve space for event cards, connectors, gate and outcomes. */
 .flow {
   display: grid;
   grid-template-columns: 1.1fr 30px 1fr 24px 1fr;
@@ -304,6 +315,7 @@ h1 {
   color: var(--muted);
   min-height: 15px;
 }
+/* An open three-column explanation mirrors the backend state transitions. */
 .steps {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -339,6 +351,7 @@ h1 {
   margin: 0;
   max-width: 360px;
 }
+/* The quickstart band groups language tabs, copyable code and contract details. */
 .quickstart {
   background: var(--surface);
   padding: 48px 0;
@@ -505,6 +518,7 @@ footer > div {
     font-size: 12px;
   }
 }
+/* Tablet: stack the hero while keeping the diagram centered and legible. */
 @media (max-width: 1150px) {
   .shell {
     width: calc(100% - 56px);
@@ -544,6 +558,7 @@ footer > div {
     font-size: 32px;
   }
 }
+/* Mobile: reflow navigation, steps and code without page-wide horizontal scrolling. */
 @media (max-width: 650px) {
   .shell {
     width: calc(100% - 36px);
@@ -712,6 +727,7 @@ footer > div {
     font-size: 11px !important;
   }
 }
+/* Honor the reader's motion preference for scrolling and hover transitions. */
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -723,6 +739,7 @@ footer > div {
   }
 }
 
+/* Allow grid children to shrink; long code scrolls inside its own panel. */
 .quick-grid > div {
   min-width: 0;
 }

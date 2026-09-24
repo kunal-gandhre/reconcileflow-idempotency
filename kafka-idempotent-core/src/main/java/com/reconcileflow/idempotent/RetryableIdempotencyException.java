@@ -18,7 +18,13 @@
 
 package com.reconcileflow.idempotent;
 
-/** Must be routed to retry, never treated as an acknowledged duplicate. */
+/**
+ * Signals an in-progress claim or lost lease that must not be acknowledged as a duplicate.
+ * A lost lease can follow a completed side effect; retries still require business idempotency.
+ *
+ * @author Kunal Gandhre
+ */
 public class RetryableIdempotencyException extends RuntimeException {
+    /** Describes why the consumer must follow its retry or reconciliation policy. */
     public RetryableIdempotencyException(String message) { super(message); }
 }

@@ -26,13 +26,22 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
+/**
+ * Registers the Redis store and interception aspect after Spring creates Redis infrastructure.
+ * Applications may replace the store or disable this configuration with reconcileflow.enabled.
+ * If enabled without any store, startup fails instead of silently running unprotected handlers.
+ *
+ * @author Kunal Gandhre
+ */
 @AutoConfiguration(after = RedisAutoConfiguration.class)
 @ConditionalOnProperty(prefix = "reconcileflow", name = "enabled", havingValue = "true", matchIfMissing = true)
 @EnableAspectJAutoProxy(proxyTargetClass = true)
 public class IdempotencyAutoConfiguration {
     @Bean @ConditionalOnMissingBean(IdempotencyStore.class)
+    /** Supplies the default Redis adapter only when the application has not supplied a store. */
     @ConditionalOnBean(StringRedisTemplate.class)
     IdempotencyStore idempotencyStore(StringRedisTemplate redis) { return new RedisIdempotencyStore(redis); }
+    /** Makes annotation interception available through Spring-managed class proxies. */
     @Bean @ConditionalOnMissingBean(IdempotentAspect.class)
     IdempotentAspect idempotentAspect(IdempotencyStore store) { return new IdempotentAspect(store); }
 }
