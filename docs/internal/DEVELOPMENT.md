@@ -52,6 +52,27 @@ Invoke-RestMethod 'http://localhost:8081/api/clusters/ReconcileFlow%20local/topi
 
 Expected: valid Compose configuration, HTTP 200 from both UIs, and Kafka cluster/topic responses without connection errors. Inspect the preconfigured Redis database in the UI; an HTTP health response alone does not prove its database connection works. These UIs can modify local data; use inspection views for smoke checks.
 
+### Reset all test data
+
+For a fresh test environment, stop host-side producers and consumers, then run
+`./scripts/reset-test-data.ps1` from PowerShell. This deletes this project's Kafka
+messages, topics and consumer offsets, every Redis database record, and RedisInsight
+settings, then starts the services and waits for Redis/Kafka health checks. Recreate
+`order-events` using the example command below before testing again. RedisInsight
+may show its first-run screen again. Ordinary `docker compose up -d` preserves data.
+
+Equivalent commands on other shells:
+
+```bash
+docker compose -p reconcileflow-dev down --volumes
+docker compose -p reconcileflow-dev up -d --wait --wait-timeout 120
+```
+
+Verify the reset before starting applications: `docker compose -p reconcileflow-dev
+exec -T redis redis-cli INFO keyspace` should list no populated databases, and
+`docker compose -p reconcileflow-dev exec -T kafka /opt/kafka/bin/kafka-topics.sh
+--bootstrap-server localhost:9092 --list` should show no application topics.
+
 ## 2. Java unit and Spring wiring tests
 
 ```bash
@@ -209,3 +230,14 @@ Compose validation passed and all four services started. Redis and Kafka health 
 RedisInsight's health endpoint returned 200, and browser inspection reached its first-run EULA/privacy screen. Database browsing remains unverified until the user completes those prompts; no terms or telemetry choices were submitted automatically. The Compose environment supplies the local Redis connection. If no connection appears after onboarding, add `redis:6379` manually with alias `ReconcileFlow local`.
 
 The accompanying comment/licensing changes passed 16 Java tests with Redis enabled, Go tests and `go vet`, and the static site build before the Compose UI additions. See [LICENSING.md](LICENSING.md) for attribution rules and detailed checks.
+
+### Fresh-data reset verification — 2026-09-24
+
+Executed `scripts/reset-test-data.ps1` against `reconcileflow-dev`. The first run
+exposed a fresh-volume permissions error at `/tmp/kafka-logs`; Compose now mounts
+Kafka data at the image-prepared `/var/lib/kafka/data` directory. A second full
+reset passed and all four services started, with Redis and Kafka healthy.
+`redis-cli INFO keyspace` reported no populated databases. An already-running host
+consumer recreated `order-events` and `fulfillment-demo`, but the topic end offset
+was 0 and the group had no committed offset: previous messages and offsets were
+cleared. Stop host applications first if you also want no topics or groups to exist.

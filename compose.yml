@@ -5,6 +5,7 @@
 # https://www.apache.org/licenses/LICENSE-2.0
 
 # Local development only: service ports are exposed on loopback, not the LAN.
+# For an empty test environment, run ./scripts/reset-test-data.ps1 (deletes project volumes).
 services:
   redis:
     image: redis:7.4-alpine
@@ -35,10 +36,11 @@ services:
     image: apache/kafka:3.9.1
     ports: ["127.0.0.1:9092:9092"]
     # Persist broker metadata and messages when listener changes recreate the container.
-    volumes: ["kafka-data:/tmp/kafka-logs"]
+    volumes: ["kafka-data:/var/lib/kafka/data"]
     environment:
       KAFKA_NODE_ID: 1
-      KAFKA_LOG_DIRS: /tmp/kafka-logs
+      # The image prepares this directory for its non-root appuser on fresh volumes.
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
       # One KRaft node acts as both broker and controller; no ZooKeeper is required.
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_LISTENERS: PLAINTEXT://:9092,INTERNAL://:29092,CONTROLLER://:9093
