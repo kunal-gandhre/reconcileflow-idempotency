@@ -77,6 +77,15 @@ On PowerShell, set `$env:REDIS_INTEGRATION = 'true'` before the test command and
 
 The Go demo (`go run ./examples/basic`) exercises Redis with three handler deliveries and two unique IDs. It does not exercise a Kafka client or offset commits.
 
+The local race run used this PowerShell command from the repository root (the container shares only the test Redis network namespace):
+
+```powershell
+docker run --rm --network container:reconcileflow-dev-redis-1 `
+  --mount "type=bind,source=$((Get-Location).Path)/go,target=/src" `
+  -w /src -e REDIS_INTEGRATION=true golang:1.24 `
+  go test -race -count=1 ./...
+```
+
 ## 5. Kafka → Spring proxy → Redis end-to-end smoke test
 
 Build the application:
@@ -155,7 +164,8 @@ Before publishing: inspect `git diff --check`, staged paths, license, README lin
 | Go middleware and real Redis tests | Passed: 7 top-level tests (plus 4 outcome subtests); `go vet` passed |
 | Go race detector | Passed in official `golang:1.24` Linux container; Windows lacked cgo |
 | Kafka consumer duplicate/offset/restart smoke | Passed: deliveries a,a,b produced two handler logs; offset 3/3, lag 0. After restart, a produced no new handler log; offset 4/4, lag 0 |
-| Website build and browser desktop/mobile checks | Pending verification |
-| GitHub CI / Pages | Pending publication and remote verification |
+| Website build and browser desktop/mobile checks | Passed: Node build; Edge at 1440×1000 and 390×844; tabs, keyboard switching, copy, three-state simulation, disclosure, no console errors; fixed mobile horizontal overflow |
+| GitHub CI | Passed: Java, Go race tests, and website build in [run 36005064290](https://github.com/kunal-gandhre/reconcileflow-idempotency/actions/runs/36005064290) |
+| GitHub Pages | First run preceded Pages setup and failed; source is now configured as GitHub Actions, deployment recheck pending |
 
 Remaining coverage limits: no Redis failover/eviction fault injection, no business database transaction crash test, no Kubernetes rebalance test, no automatic lease renewal, no throughput benchmark, and no real Go Kafka consumer integration. Extend these before making stronger production claims.
