@@ -165,7 +165,9 @@ Before publishing: inspect `git diff --check`, staged paths, license, README lin
 | Go race detector | Passed in official `golang:1.24` Linux container; Windows lacked cgo |
 | Kafka consumer duplicate/offset/restart smoke | Passed: deliveries a,a,b produced two handler logs; offset 3/3, lag 0. After restart, a produced no new handler log; offset 4/4, lag 0 |
 | Website build and browser desktop/mobile checks | Passed: Node build; Edge at 1440×1000 and 390×844; tabs, keyboard switching, copy, three-state simulation, disclosure, no console errors; fixed mobile horizontal overflow |
-| GitHub CI | Passed: Java, Go race tests, and website build in [run 36005064290](https://github.com/kunal-gandhre/reconcileflow-idempotency/actions/runs/36005064290) |
-| GitHub Pages | First run preceded Pages setup and failed; source is now configured as GitHub Actions, deployment recheck pending |
+| GitHub CI | Passed: Java, Go race tests, and website build in [run 36005367573](https://github.com/kunal-gandhre/reconcileflow-idempotency/actions/runs/36005367573) |
+| GitHub Pages | Passed: [deployment 36005367539](https://github.com/kunal-gandhre/reconcileflow-idempotency/actions/runs/36005367539). Live page verified at https://kunal-gandhre.github.io/reconcileflow-idempotency/ |
+
+The initial Pages run failed because the repository's Pages source had not yet been configured. Setting Source to GitHub Actions and pushing the website refinements resolved it. Local screenshots were inspected at desktop and mobile sizes; final deployed DOM and asset loading were checked separately. A later full-page screenshot attempt timed out in the browser automation layer; this did not affect site loading or the earlier visual checks.
 
 Remaining coverage limits: no Redis failover/eviction fault injection, no business database transaction crash test, no Kubernetes rebalance test, no automatic lease renewal, no throughput benchmark, and no real Go Kafka consumer integration. Extend these before making stronger production claims.

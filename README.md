@@ -4,6 +4,8 @@
 
 Redis-backed deduplication for synchronous Kafka consumers, with a Java 21 Spring Boot starter and an idiomatic Go handler wrapper.
 
+[Website](https://kunal-gandhre.github.io/reconcileflow-idempotency/) · [Internal development and testing runbook](docs/internal/DEVELOPMENT.md) · [CI](https://github.com/kunal-gandhre/reconcileflow-idempotency/actions/workflows/ci.yml)
+
 ReconcileFlow claims an event, runs your handler, and remembers successful completion for a bounded period. A completed duplicate skips business work; an event still being processed returns an error so the consumer can retry.
 
 **Status: early preview, `0.1.0-SNAPSHOT`.** Build from source. No Maven Central release, production certification, or exactly-once side-effect guarantee is claimed. Licensed under Apache 2.0.
