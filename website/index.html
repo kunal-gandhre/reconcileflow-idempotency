@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ReconcileFlow — Kafka consumer deduplication for Java & Go</title>
+  <meta name="description" content="Redis-backed deduplication for Kafka consumers. A Spring Boot starter and Go library with explicit processing states, ownership-safe cleanup, and clear guarantees.">
+  <meta name="theme-color" content="#0755ff"><link rel="icon" href="./favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="shell"><a class="brand" href="#" aria-label="ReconcileFlow home">Reconcile<span>Flow</span></a><nav aria-label="Main navigation"><a href="#how-it-works">How it works</a><a href="#quickstart">Quickstart</a><a href="https://github.com/kunal-gandhre/reconcileflow-idempotency">GitHub <span aria-hidden="true">↗</span></a></nav></header>
+<main id="main">
+  <section class="hero shell">
+    <div class="hero-copy"><h1>Repeat delivery.<br><span>Not the work.</span></h1><p>Redis-backed deduplication for Kafka consumers.<br>Built for Spring Boot and Go.</p><div class="actions"><a class="button primary" href="#quickstart">Get started <span aria-hidden="true">→</span></a><button class="button secondary" id="explore">Explore the flow</button></div><p class="preview-note">Open source. Self-hosted. Early preview.</p></div>
+    <div class="flow" aria-label="Interactive illustration of consumer deduplication">
+      <div class="events"><div class="diagram-label">Incoming events <small>from Kafka</small></div><div class="event active" id="incoming"><span class="dot"></span><code>{<br>&nbsp; "eventId": "order-1042",<br>&nbsp; "type": "order.created"<br>}</code></div><div class="event"><span class="dot"></span><code>{<br>&nbsp; "eventId": "order-1042",<br>&nbsp; "type": "order.created"<br>}</code></div><div class="event muted"><span class="dot"></span><code>{<br>&nbsp; "eventId": "order-1043",<br>&nbsp; "type": "order.created"<br>}</code></div></div>
+      <div class="connectors" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div class="gate"><div class="gate-title"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="m4 13 16-8 16 8-16 8-16-8Zm0 8 16 8 16-8M4 29l16 8 16-8"/></svg><div><strong>Redis</strong><small>Idempotency gate</small></div></div><code>NEW&nbsp; → claim<br>BUSY → retry<br>DONE → skip</code><div class="gate-state" id="gate-state">Ready for delivery</div></div>
+      <div class="out-connect" aria-hidden="true"><i></i><i></i></div>
+      <div class="outcomes"><div><div class="diagram-label">Process event</div><div class="result" id="processed"><span class="result-icon">✓</span><div>Handler executed<small>on a new claim</small></div></div></div><div><div class="diagram-label">Completed duplicate</div><div class="result duplicate" id="duplicate"><span class="result-icon">−</span><div>Work skipped<small>within retention</small></div></div></div></div>
+      <p class="simulation-status" id="flow-status" aria-live="polite">Illustration · select “Explore the flow” to simulate delivery.</p>
+    </div>
+  </section>
+  <section class="steps shell" id="how-it-works" aria-label="How it works"><article><span class="step-number">01</span><h2>Claim</h2><p>Atomically claim an event with a unique key and an ownership token. Busy claims return a retryable error.</p></article><article><span class="step-number">02</span><h2>Process</h2><p>Run your synchronous handler. On failure, release only your own claim and let the consumer retry.</p></article><article><span class="step-number">03</span><h2>Remember</h2><p>Mark successful work as completed. Skip repeat deliveries for your configured retention window.</p></article></section>
+  <section class="quickstart" id="quickstart"><div class="shell quick-grid"><div><h2>Get up and running</h2><div class="tabs" role="tablist" aria-label="Integration language"><button id="tab-java" role="tab" aria-selected="true" aria-controls="code-panel" tabindex="0">Java (Spring Boot)</button><button id="tab-go" role="tab" aria-selected="false" aria-controls="code-panel" tabindex="-1">Go</button></div><div class="code-window" id="code-panel" role="tabpanel" aria-labelledby="tab-java"><div class="code-toolbar"><span id="code-title">Spring Boot · install from source first</span><button id="copy" aria-label="Copy integration example">Copy <span aria-hidden="true">⧉</span></button></div><pre><code id="code"></code></pre></div><a class="text-link" href="https://github.com/kunal-gandhre/reconcileflow-idempotency#quick-start--java">Read the full integration guide <span aria-hidden="true">↗</span></a><span id="copy-status" role="status"></span></div><div class="contract"><h2>A small library.<br>An explicit contract.</h2><p class="contract-lead">Deduplication within a retention window.<br>Not exactly-once side effects.</p><p>Keep your consumer. Add a Spring annotation or a Go wrapper. Redis holds the state; your application owns the business logic.</p><details><summary>Understand the boundaries <span aria-hidden="true">+</span></summary><p>A crash after a side effect but before completion can repeat that effect. Lease expiry and Redis data loss can also allow reprocessing. Use business-level idempotency keys or a transactional inbox for critical writes. No automatic lease renewal is included.</p></details></div></div></section>
+</main>
+<footer class="shell"><a class="brand small" href="#">Reconcile<span>Flow</span></a><div><a href="https://github.com/kunal-gandhre/reconcileflow-idempotency/blob/main/LICENSE">Apache 2.0</a><span class="divider"></span><span>Early preview · v0.1</span></div></footer>
+<script type="module" src="./app.js"></script>
+</body></html>

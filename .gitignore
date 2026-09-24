@@ -1,0 +1,9 @@
+**/target/
+node_modules/
+.tools/
+.qa/
+*.log
+.env
+.idea/
+.DS_Store
+website/dist/
